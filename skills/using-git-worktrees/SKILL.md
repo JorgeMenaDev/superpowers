@@ -1,6 +1,7 @@
 ---
 name: using-git-worktrees
 description: Use when creating an isolated Git workspace, especially for Bun monorepos or concurrent local Convex development.
+version: 1.0.1
 mutating: true
 writes_to: ["<repo-name>-worktrees/", "**/.env.local"]
 ---
