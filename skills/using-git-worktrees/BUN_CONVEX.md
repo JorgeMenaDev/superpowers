@@ -23,11 +23,11 @@ export WORKTREE_CONVEX_CLOUD_PORT=<free-even-port>
 export WORKTREE_CONVEX_SITE_PORT=$((WORKTREE_CONVEX_CLOUD_PORT + 1))
 ```
 
-When Portless is present, use a unique name containing `WORKTREE_ID`; one global Portless proxy may be shared, but its route name and app port may not be shared.
+When Portless is present, prefer its automatic Git-branch prefix with a stable product-surface name, then use the exact URL it emits. If the repository disables automatic branch namespacing, include `WORKTREE_ID` in the name explicitly. Pass a fixed child port through `PORTLESS_APP_PORT` (not `PORT`) when the wrapper supports it. One global Portless proxy may be shared, but the effective route and app port may not be shared.
 
 ## 4. Create a worktree-local Convex deployment
 
-Run the repository’s local Convex bootstrap when present, passing the runtime identity and allocated ports explicitly. Otherwise run the pinned Convex CLI from the backend package with `--local`, the allocated cloud/site ports, and a worktree-unique local deployment name. Then write every required Convex selector/URL through the repository’s environment command or the Convex CLI output.
+Run the repository’s local Convex bootstrap when present, passing the runtime identity and allocated ports explicitly. Otherwise inspect the pinned CLI's `deployment` and `dev` help, create/select a fresh local deployment, then start it with the allocated cloud/site ports. Convex CLI versions differ: do not assume a `--local` or instance-name flag exists. Then write every required Convex selector/URL through the repository’s environment command or the CLI output.
 
 Hard gates:
 
