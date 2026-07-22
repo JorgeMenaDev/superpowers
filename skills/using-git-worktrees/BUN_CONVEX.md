@@ -29,6 +29,8 @@ When Portless is present, prefer its automatic Git-branch prefix with a stable p
 
 Run the repository’s local Convex bootstrap when present, passing the runtime identity and allocated ports explicitly. Otherwise inspect the pinned CLI's `deployment` and `dev` help, create/select a fresh local deployment, then start it with the allocated cloud/site ports. Convex CLI versions differ: do not assume a `--local` or instance-name flag exists. Then write every required Convex selector/URL through the repository’s environment command or the CLI output.
 
+If the repository tracks Convex generated declarations, inspect `convex dev --help` for a codegen-disable option. Use it for the long-running worktree backend when available (`--codegen=disable` in recent CLIs), after bootstrap has established that the committed declarations are current. Run codegen deliberately when a schema/API change needs new tracked output; do not let an idle local backend keep rewriting generated files. Restore bootstrap-only churn and confirm `git status --short` stays clean while the backend remains live.
+
 Hard gates:
 
 - `CONVEX_DEPLOYMENT` starts with `local:`;
