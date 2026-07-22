@@ -2,14 +2,14 @@
 name: using-git-worktrees
 description: Use when creating an isolated Git workspace, especially for Bun monorepos or concurrent local Convex development.
 mutating: true
-writes_to: [.worktrees/, .gitignore, "**/.env.local"]
+writes_to: ["<repo-name>-worktrees/", "**/.env.local"]
 ---
 
 # Using Git Worktrees
 
 ## Contract
 
-One feature gets one branch, one project-local `.worktrees/<branch-slug>` directory, one copied set of ignored local environment files, and one isolated runtime identity. The worktree is ready only when dependencies are installed, every local target is non-production, and its app plus local database can run without sharing ports or state with another worktree.
+One feature gets one branch, one sibling `<repo-name>-worktrees/<branch-slug>` directory, one copied set of ignored local environment files, and one isolated runtime identity. The worktree is ready only when dependencies are installed, every local target is non-production, and its app plus local database can run without sharing ports or state with another worktree.
 
 Announce: “I’m using the using-git-worktrees skill to create an isolated local runtime.”
 
@@ -27,15 +27,17 @@ printf 'REPO_ROOT: %s\nIS_LINKED: %s\nIS_SUBMODULE: %s\nBRANCH: %s\n' \
   "$([ -n "$superproject" ] && echo yes || echo no)" "$(git branch --show-current)"
 ```
 
-Read the root instruction file and package scripts. If `IS_LINKED` is `yes` and `IS_SUBMODULE` is `no`, keep the current worktree and continue at Bootstrap. Otherwise fetch the remote without changing the source checkout. Use the user’s base when explicit; otherwise create from current `origin/main`.
+Read the root instruction file and package scripts. If `IS_LINKED` is `yes` and `IS_SUBMODULE` is `no`, keep an externally managed worktree or move a manual nested worktree to the canonical sibling root before Bootstrap. Otherwise fetch the remote without changing the source checkout. Use the user’s base when explicit; otherwise create from current `origin/main`.
 
 ## 2. Create
 
-Set a short branch name and filesystem-safe slug. Use `.worktrees/<slug>` under the primary checkout. Verify `.worktrees/` is ignored with `git check-ignore -q .worktrees`; if not, add it to the repository’s `.gitignore` through the repository’s normal change process before creating the worktree. Never put a worktree inside another linked worktree.
+Set a short branch name and filesystem-safe slug. Put manual worktrees beside—not inside—the primary checkout. This prevents Next.js, Turborepo, file watchers, and lockfile discovery from escaping into the primary checkout. The sibling root is runtime-neutral and needs no repository ignore rule.
 
 ```bash
 git fetch origin main
-git worktree add ".worktrees/$slug" -b "$branch" origin/main
+worktree_root="$(dirname "$repo_root")/$(basename "$repo_root")-worktrees"
+mkdir -p "$worktree_root"
+git worktree add "$worktree_root/$slug" -b "$branch" origin/main
 ```
 
 The source checkout may be dirty; do not stash, clean, reset, rebase, copy tracked files from it, or base the new branch on its stale `main`.
