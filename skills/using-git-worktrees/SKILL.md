@@ -2,7 +2,7 @@
 name: using-git-worktrees
 description: Use when creating an isolated Git workspace, especially for Bun monorepos or concurrent local Convex development.
 mutating: true
-writes_to: [.worktrees/, .gitignore]
+writes_to: [.worktrees/, .gitignore, "**/.env.local"]
 ---
 
 # Using Git Worktrees

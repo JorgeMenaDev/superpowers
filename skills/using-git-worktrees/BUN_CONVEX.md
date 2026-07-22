@@ -4,7 +4,7 @@ Read the repository instructions first. This contract fills the worktree gap; it
 
 ## 1. Copy local environment safely
 
-Use the primary checkout as the environment source. Discover exact `.env.local` files while excluding `.git`, `.worktrees`, `node_modules`, build output, and local Convex state. Copy each ignored file to the same relative path in the worktree, creating parent directories. Do not copy `.env.production.local`, deploy keys, `.convex/`, `node_modules/`, caches, or build output. Do not print file contents or values.
+Use the primary checkout as the environment source. Run this skill's `scripts/copy-env-local.sh <primary-checkout> <worktree>` helper. It copies ignored files named exactly `.env.local` to the same relative paths while excluding environment profiles, provider state, prior worktrees, dependencies, caches, build output, and local Convex state. It also strips Convex selectors, URLs, deploy keys, and admin keys so local bootstrap starts fail-closed. Do not print file contents or values.
 
 If the repository has a runtime-neutral `setup:worktree` command, prefer it and verify the same result. Product- or runtime-specific copy helpers are not canonical.
 
@@ -27,7 +27,7 @@ When Portless is present, use a unique name containing `WORKTREE_ID`; one global
 
 ## 4. Create a worktree-local Convex deployment
 
-Run the repository’s local Convex bootstrap when present, passing the runtime identity and allocated ports explicitly. Otherwise run the pinned Convex CLI from the backend package with `--local`, the allocated cloud/site ports, and a worktree-unique local deployment name. Then rewrite every copied Convex selector/URL through the repository’s environment command or the Convex CLI output.
+Run the repository’s local Convex bootstrap when present, passing the runtime identity and allocated ports explicitly. Otherwise run the pinned Convex CLI from the backend package with `--local`, the allocated cloud/site ports, and a worktree-unique local deployment name. Then write every required Convex selector/URL through the repository’s environment command or the Convex CLI output.
 
 Hard gates:
 
