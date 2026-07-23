@@ -4,7 +4,7 @@ Read the repository instructions first. This contract fills the worktree gap; it
 
 ## 1. Copy local environment safely
 
-Use the primary checkout as the environment source. Run this skill's `scripts/copy-env-local.sh <primary-checkout> <worktree>` helper. It copies ignored files named exactly `.env.local` to the same relative paths while excluding environment profiles, provider state, prior worktrees, dependencies, caches, build output, and local Convex state. It also strips Convex selectors, URLs, deploy keys, and admin keys so local bootstrap starts fail-closed. Do not print file contents or values.
+Use the primary checkout as the environment source. On first creation or when files are missing, run this skill's `scripts/copy-env-local.sh <primary-checkout> <worktree>` helper. It copies ignored files named exactly `.env.local` to the same relative paths while excluding environment profiles, provider state, prior worktrees, dependencies, caches, build output, and local Convex state. It also strips Convex selectors, URLs, deploy keys, and admin keys so local bootstrap starts fail-closed. Do not overwrite a warm launch worktree's configured local targets merely to refresh it. Do not print file contents or values.
 
 If the repository has a runtime-neutral `setup:worktree` command, prefer it and verify the same result. Product- or runtime-specific copy helpers are not canonical.
 
@@ -14,7 +14,7 @@ Run `bun install --frozen-lockfile` at the monorepo root. A lockfile change is a
 
 ## 3. Allocate an isolated runtime
 
-Derive a runtime ID from the branch slug. Choose one unused app port and one unused consecutive Convex cloud/site pair. Check actual listeners with `lsof`; never assume default ports are free. Export the identity for setup and dev commands:
+Derive a runtime ID from the branch slug (`local-main` for the launch fast path). Reserve one unused contiguous app-port block large enough for every requested surface and one unused consecutive Convex cloud/site pair. The repository assigns surface ports from `WORKTREE_APP_PORT` in its declared surface order. Check every listener with `lsof`; never assume defaults are free. Export:
 
 ```bash
 export WORKTREE_ID="$slug"
@@ -43,4 +43,6 @@ Seed only the repository’s documented local baseline. Never import production 
 
 ## 5. Start and smoke
 
-Start the backend and one requested app with the runtime identity/ports in their environment. Keep logs per worktree. Prove the Convex cloud and site ports are listening, the app URL responds, and the owning processes have this worktree as their working directory. Leave servers running only when the user asked for a usable POC; otherwise stop them after proof.
+Run `bun run setup:worktree` when declared. For authenticated local QA, run the repository's canonical launcher (normally `bun run qa:local -- [--surface <key>]...`); it must fail before browser startup when the effective credential is invalid, start the backend plus requested surfaces, and emit stable local login URLs.
+
+Keep logs per worktree. Prove every allocated port is listening, every requested URL responds, and each process has this worktree as its working directory. Verify authentication in a fresh signed-out browser context: an existing session can select the wrong actor even when the database is isolated. Repair credential, seed, browser-session, or runtime failures in the same worktree. If a warm launch exceeds five minutes, report the timed phase causing the delay. Leave servers running only when the user asked for a usable POC; otherwise stop them after proof.

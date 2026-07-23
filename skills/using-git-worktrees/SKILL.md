@@ -1,7 +1,7 @@
 ---
 name: using-git-worktrees
-description: Use when creating an isolated Git workspace, especially for Bun monorepos or concurrent local Convex development.
-version: 1.0.1
+description: Use when creating an isolated Git workspace or running the current default branch locally, especially for Bun monorepos or concurrent local Convex development.
+version: 1.1.0
 mutating: true
 writes_to: ["<repo-name>-worktrees/", "**/.env.local"]
 ---
@@ -10,7 +10,7 @@ writes_to: ["<repo-name>-worktrees/", "**/.env.local"]
 
 ## Contract
 
-One feature gets one branch, one sibling `<repo-name>-worktrees/<branch-slug>` directory, one copied set of ignored local environment files, and one isolated runtime identity. The worktree is ready only when dependencies are installed, every local target is non-production, and its app plus local database can run without sharing ports or state with another worktree.
+Feature work gets one branch and sibling `<repo-name>-worktrees/<branch-slug>`. A no-edit request to run current `main` gets the reusable detached `<repo-name>-worktrees/local-main`. Every worktree gets isolated environment files, ports, and local state. Readiness requires installed dependencies, non-production targets, live requested surfaces, and no shared runtime state.
 
 Announce: “I’m using the using-git-worktrees skill to create an isolated local runtime.”
 
@@ -28,24 +28,36 @@ printf 'REPO_ROOT: %s\nIS_LINKED: %s\nIS_SUBMODULE: %s\nBRANCH: %s\n' \
   "$([ -n "$superproject" ] && echo yes || echo no)" "$(git branch --show-current)"
 ```
 
-Read the root instruction file and package scripts. If `IS_LINKED` is `yes` and `IS_SUBMODULE` is `no`, keep an externally managed worktree or move a manual nested worktree to the canonical sibling root before Bootstrap. Otherwise fetch the remote without changing the source checkout. Use the user’s base when explicit; otherwise create from current `origin/main`.
+Read the root instruction file and package scripts. If `IS_LINKED` is `yes` and `IS_SUBMODULE` is `no`, keep an externally managed worktree or move a manual nested worktree to the canonical sibling root before Bootstrap. Otherwise fetch without changing the source checkout.
 
-## 2. Create
+Choose one mode from the request:
 
-Set a short branch name and filesystem-safe slug. Put manual worktrees beside—not inside—the primary checkout. This prevents Next.js, Turborepo, file watchers, and lockfile discovery from escaping into the primary checkout. The sibling root is runtime-neutral and needs no repository ignore rule.
+- `FEATURE`: implementation or any tracked edit. Use the user’s base when explicit; otherwise current `origin/main`.
+- `LAUNCH_MAIN`: run/preview/QA of current `main` with no tracked edits. Its ignored local database is disposable QA state.
+
+## 2. Prepare
+
+Put manual worktrees beside—not inside—the primary checkout. Fetch `origin/main`, then set:
 
 ```bash
 git fetch origin main
 worktree_root="$(dirname "$repo_root")/$(basename "$repo_root")-worktrees"
 mkdir -p "$worktree_root"
+```
+
+For `FEATURE`, set a short branch and slug, then run:
+
+```bash
 git worktree add "$worktree_root/$slug" -b "$branch" origin/main
 ```
 
-The source checkout may be dirty; do not stash, clean, reset, rebase, copy tracked files from it, or base the new branch on its stale `main`.
+For `LAUNCH_MAIN`, use `$worktree_root/local-main`. If absent, run `git worktree add --detach "$worktree_root/local-main" origin/main`. If present, require it to be registered to this repository, clean, and to have zero commits in `origin/main..HEAD`; stop only its owned processes, then run `git -C "$worktree_root/local-main" switch --detach origin/main`. A failed runtime is repaired here; creating another worktree is the failure mode this gate prevents.
+
+The source checkout may be dirty. Preserve it: never stash, clean, reset, rebase, copy tracked files from it, or base work on its stale `main`.
 
 ## 3. Bootstrap
 
-If the worktree is a Bun monorepo or uses Convex, read [BUN_CONVEX.md](BUN_CONVEX.md) in full and follow it. Otherwise use the package manager and setup commands declared by the repository. Prefer a repo’s generic `setup:worktree` script when present, but the skill remains the owner of readiness and verifies its effects.
+If the worktree is a Bun monorepo or uses Convex, read [BUN_CONVEX.md](BUN_CONVEX.md) in full and follow it. Otherwise use repository-declared setup. Prefer a generic `setup:worktree`; for `LAUNCH_MAIN`, prefer the repository’s canonical local QA launcher after setup.
 
 Do not run or create unit tests unless the repository owner explicitly requested them. Use the repository’s existing check/build workflow and a live smoke instead.
 
@@ -57,8 +69,8 @@ Before implementation, verify all of these:
 - ignored `.env.local` files needed by the monorepo exist at the same relative paths, without printing values;
 - the lockfile is unchanged after dependency installation;
 - every Convex selector is `local:*`, every Convex URL is loopback, and database state lives under this worktree;
-- allocated app and Convex ports are listening and do not belong to another worktree;
-- the app responds on its unique URL; and
+- every allocated surface and Convex port is listening and owned by this worktree;
+- every requested surface responds on its unique URL; and
 - `git status --short` contains no accidental environment, dependency, or generated-file changes.
 
 If any item fails, report `BLOCKED` with the exact command and error. Continuing with a shared/cloud database, missing local environment, or colliding port is the failure mode this gate prevents.
@@ -67,14 +79,15 @@ If any item fails, report `BLOCKED` with the exact command and error. Continuing
 
 ```text
 READY | BLOCKED
+Mode: FEATURE | LAUNCH_MAIN
 Worktree: <absolute path>
 Branch/base: <branch> from <sha>
 Environment: <N> ignored files copied; values not displayed
-Runtime: app <url>; Convex <local name> on <cloud>/<site ports>
+Runtime: <surface URLs>; Convex <local name> on <cloud>/<site ports>
 Validation: <commands and result>
 Friction: <none or exact issue>
 ```
 
 ## Cleanup
 
-Stop only processes whose working directory is this worktree. Remove the worktree only when its branch is merged, abandoned by explicit instruction, or the POC is complete and its findings are preserved. Use `git worktree remove <exact-path>` from the primary checkout; delete the branch only when its work is no longer needed.
+Stop only processes whose working directory is this worktree. Keep a clean `local-main` warm for reuse. Remove feature worktrees only when merged, explicitly abandoned, or the POC is preserved. Use `git worktree remove <exact-path>` from the primary checkout; delete a feature branch only when no longer needed.
